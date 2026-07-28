@@ -48,7 +48,7 @@ Two opinionated design choices worth knowing before you adopt it:
 - **Romantic-lane tracking** — a separate stage field (Interested → Flirting → Mutual → …) so that lane is queryable without polluting the friendship tiers.
 - **Remember the human details** — birthdays, partners' and kids' names, food preferences, how you met. Ask "what do I know about Sam?" before you see them again.
 - **Data quality on autopilot** — the skill carries standing rules (clubs are linked records, never text; never overwrite a filled field; flag instead of guess), and a periodic scan can tidy drift.
-- **Scheduled automations** (optional) — a weekly "who's due" nudge, a monthly data-quality scan, a changelog consolidation job. The skill documents how to keep them from breaking when the schema evolves.
+- **Scheduled automations** (optional) — a weekly "who's due" nudge, a monthly data-quality scan, a changelog consolidation job. The skill documents how to keep them from breaking when the schema evolves, and how to pick their execution environment: because the CRM's critical path is pure connector-MCP, automations can run on cloud/hosted schedulers with no desktop machine awake — only browser fallbacks and local-MCP notification channels require a local session.
 
 All example names above are invented.
 

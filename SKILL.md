@@ -29,6 +29,12 @@ A personal Social CRM built in Airtable for tracking relationships: friends, clu
 
 **Preferred: Airtable MCP server** (tools named `<airtable-mcp>__*`). It works in any session — interactive AND unattended scheduled runs — with no Chrome dependency and no permission prompts. Use this for ALL routine CRM operations.
 
+**Execution environments — read before wiring up scheduled automations.** Agent platforms run scheduled/unattended tasks in one of two places, and the tool surface differs:
+- **Hosted/cloud runs** (the default for scheduled tasks on some platforms): only *connector-based* MCP servers — like the Airtable connector — are available. Local MCP servers, Chrome/browser tools, and computer-use do not exist there.
+- **Local/desktop-bound runs** (interactive sessions, or scheduled tasks explicitly bound to the local machine): everything in this file works, including the Chrome fallback and local MCP tools.
+
+Design rule: keep the critical path (roster intake, scans, record reads/writes) pure-connector so it runs anywhere; treat the Chrome fallback and local-MCP notification channels as local-session extras. If a scheduled automation silently stops working after a platform update, check whether it moved to cloud execution and lost its local tools.
+
 If the MCP tools aren't in your active tool list, load them in bulk:
 ```
 ToolSearch { query: "<your-airtable-mcp-server-id>", max_results: 30 }
@@ -57,7 +63,7 @@ That returns every Airtable MCP tool by server-name substring match. Don't `sele
 4. Filter / sort client-side for anything the structured filter can't express
 ```
 
-**Fallback: Chrome `javascript_tool` fetch().** Use only when the Airtable MCP errors or returns nothing. Same token, same endpoints:
+**Fallback: Chrome `javascript_tool` fetch()** — LOCAL/DESKTOP SESSIONS ONLY (a cloud scheduled run has no Chrome; there, an Airtable-MCP failure is a report-and-stop, not a fallback). Use only when the Airtable MCP errors or returns nothing. Same token, same endpoints:
 1. Call `tabs_context_mcp(createIfEmpty: true)` then navigate to `https://airtable.com` — exactly once per task.
 2. Do ALL work in a single `javascript_tool` IIFE (every extra call opens a new tab).
 3. If Chrome is unreachable, call `mcp__computer-use__request_access` for "Google Chrome" then `mcp__computer-use__open_application` to launch it. Do NOT ask the user to open Chrome.
@@ -80,7 +86,7 @@ For Data API (records via Chrome fallback): `https://api.airtable.com/v0/{baseId
 
 ## Automated runs that depend on this CRM (read before any schema change)
 
-If you build scheduled automations on top of this CRM (nudge reports, data-quality scans, digest jobs), they will hard-code field IDs, choice IDs, and tier/cadence names. Before you rename a field, change a singleSelect choice, retire a tier, or restructure a table, find every automation that references the base ID and update it in the same session; otherwise the automation silently breaks or writes to the wrong place. A simple way to keep an inventory current: grep your automations folder for the base ID and maintain a dependency table (run, what it touches, which IDs it depends on) in this file. Example automations that work well on this schema: a weekly "who is due for a reach-out" nudge, a monthly data-quality scan, a periodic changelog consolidation.
+If you build scheduled automations on top of this CRM (nudge reports, data-quality scans, digest jobs), first decide where each one executes — cloud runs only have connector MCP tools, local runs have everything (see "Execution environments" above) — and keep any automation that must notify you on a channel reachable from its environment. They will also hard-code field IDs, choice IDs, and tier/cadence names. Before you rename a field, change a singleSelect choice, retire a tier, or restructure a table, find every automation that references the base ID and update it in the same session; otherwise the automation silently breaks or writes to the wrong place. A simple way to keep an inventory current: grep your automations folder for the base ID and maintain a dependency table (run, what it touches, which IDs it depends on) in this file. Example automations that work well on this schema: a weekly "who is due for a reach-out" nudge, a monthly data-quality scan, a periodic changelog consolidation.
 
 ---
 
@@ -346,7 +352,7 @@ PATCH the People record. If moving data out of Notes into a proper field: set th
 ## Telegram Notifications
 Send summaries to the user via Telegram when useful (batch operations, scheduled tasks, dispatch runs).
 
-**Preferred: the Telegram MCP tool** `mcp__Telegram_Notifier__send_message` (load via `ToolSearch { query: "select:mcp__Telegram_Notifier__send_message" }` if absent). It is the proven path from sandboxed/scheduled runs.
+**Preferred: the Telegram MCP tool** `mcp__Telegram_Notifier__send_message` (load via `ToolSearch { query: "select:mcp__Telegram_Notifier__send_message" }` if absent). It is the proven path from *locally executed* sessions and scheduled runs. It is a LOCAL MCP server — a cloud scheduled run cannot reach it; from cloud, use a connector-available channel or the HTTP fallback below.
 
 **Fallback (direct HTTP — has returned 401 from some sandboxes; verify before relying on it):**
 ```js

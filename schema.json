@@ -1,0 +1,147 @@
+{
+  "_readme": "Machine-readable schema for the social-crm-template Airtable base. An agent (or a human) can recreate the full base from this file alone — see SETUP.md for the step-by-step build procedure. Link fields are created in pass 2 (they require the target table to exist first). Every 'multipleRecordLinks' field is defined ONCE, on its owning table; Airtable auto-creates the reverse field on the target table — 'reverseFieldName' is what that auto-created field should be renamed to. Choice lists marked 'personalize' are starter values you are expected to replace with your own.",
+  "template": "social-crm-template",
+  "schemaVersion": 2,
+  "baseName": "Social CRM",
+  "creationOrder": {
+    "pass1_tables": ["People", "Groups", "Events", "Interactions", "Rosters", "Changelog"],
+    "pass2_linkFields": [
+      "People.Partner",
+      "People.Groups",
+      "Interactions.Person",
+      "Events.People",
+      "Rosters.Anchor Group",
+      "Rosters.Anchor Person",
+      "Rosters.Event",
+      "Rosters.Promoted People"
+    ]
+  },
+  "tables": [
+    {
+      "name": "People",
+      "description": "One record per person. The main contact table.",
+      "fields": [
+        { "name": "Name", "type": "singleLineText", "primary": true, "description": "Full name or primary identifier" },
+        { "name": "Community Name", "type": "singleLineText", "description": "Nickname used in a social scene, club, or community, if any" },
+        { "name": "Nicknames / Aliases", "type": "multilineText", "description": "Common nicknames or alternate names, one per line" },
+        { "name": "Phone", "type": "phoneNumber" },
+        { "name": "Email", "type": "email" },
+        { "name": "Instagram / Social", "type": "url", "description": "Primary social media profile" },
+        { "name": "Location", "type": "multilineText", "description": "Street address or a rough area description" },
+        { "name": "Birthday", "type": "date", "options": { "dateFormat": { "name": "iso" } } },
+        { "name": "Known Since", "type": "date", "options": { "dateFormat": { "name": "iso" } }, "description": "Approximate date first met — use YYYY-01-01 if only the year is known" },
+        {
+          "name": "Relationship Tier", "type": "singleSelect",
+          "options": { "choices": ["Close Friend", "Friend", "Acquaintance", "Work Contact", "Scene Friend", "Scene Foe", "Old Friend", "Building"] },
+          "description": "Building = someone the user is actively turning into a friend (not a friend yet); give Building people a Follow Up Frequency so the bump scan tracks them"
+        },
+        {
+          "name": "Follow Up Frequency", "type": "singleSelect",
+          "options": { "choices": ["Weekly", "Every 2 weeks", "Frequent", "Monthly check-in", "Occasional text", "Every 6 weeks", "Occasional drinks", "Brunch", "Quarterly", "Twice a year", "Annual / Life events", "As needed"] },
+          "description": "Per-person reach-out cadence; each choice maps to a day count in SKILL.md — the bump scan computes due-ness from this + Last Contacted"
+        },
+        { "name": "Next Follow-Up", "type": "date", "options": { "dateFormat": { "name": "iso" } }, "description": "Optional MANUAL override date for the next planned reach-out; not auto-computed" },
+        { "name": "Last Contacted", "type": "date", "options": { "dateFormat": { "name": "iso" } }, "description": "Date of most recent real-world contact; updated when an Interaction is logged" },
+        {
+          "name": "Tags", "type": "multipleSelects", "personalize": true,
+          "options": { "choices": ["College", "Work", "Travel", "Family", "Hiking", "Sports", "Music", "Food", "Art", "Local"] },
+          "description": "Cross-cutting labels. STARTER SET — replace with the contexts of your own life. A 'Local' tag (people geographically near you) is useful for scoping scans"
+        },
+        {
+          "name": "Member Status", "type": "singleSelect", "personalize": true,
+          "options": { "choices": ["Current Member", "Former Member"] },
+          "description": "Membership standing in your primary scene/club/community, if you have one. Rename or delete if not applicable"
+        },
+        {
+          "name": "Romantic Interest", "type": "singleSelect",
+          "options": { "choices": ["Interested", "Flirting", "Mutual", "Situationship", "Former Hookup", "Former Flame"] },
+          "description": "See SKILL.md for the meaning of each stage"
+        },
+        { "name": "Likes & Interests", "type": "multilineText", "description": "Hobbies, preferences, food likes/dislikes, music taste, teams" },
+        { "name": "Family and Pets", "type": "multilineText", "description": "People close to them who don't have their own record. One relation per line as 'Relation: Name'; use '(name unknown)' where a name is not known" },
+        { "name": "Job/Employer", "type": "singleLineText", "description": "Job title and/or employer" },
+        { "name": "How We Met", "type": "multilineText", "description": "Brief context for where/how the user met this person" },
+        { "name": "History", "type": "multilineText", "description": "Longer-arc relationship backstory that doesn't fit a single interaction" },
+        { "name": "Notes", "type": "multilineText", "description": "Catch-all, LAST RESORT. If data belongs in a structured field, it goes there instead" },
+        { "name": "Partner", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Partner Of", "description": "Their partner/spouse, when that person has their own record. Self-link; Airtable creates a second reverse field — rename it 'Partner Of' or hide it" },
+        { "name": "Groups", "type": "multipleRecordLinks", "linkedTable": "Groups", "reverseFieldName": "People", "description": "Clubs/groups this person belongs to. Always a linked record, never text in Notes" }
+      ]
+    },
+    {
+      "name": "Groups",
+      "description": "Clubs, teams, communities, friend groups, workplaces.",
+      "fields": [
+        { "name": "Group Name", "type": "singleLineText", "primary": true },
+        {
+          "name": "Type", "type": "singleSelect",
+          "options": { "choices": ["Friend Group", "Social Circle", "Group Chat", "Community", "Other"] }
+        },
+        { "name": "Group Subtype", "type": "singleLineText", "personalize": true, "description": "Free-text refinement, e.g. Book Club, Running Club" },
+        { "name": "Abbreviation", "type": "singleLineText", "description": "Short form the user actually says, so lookups match casual speech" },
+        { "name": "Last Contacted", "type": "date", "options": { "dateFormat": { "name": "iso" } }, "description": "Last time the user showed up to this group" },
+        { "name": "Notes", "type": "multilineText" }
+      ]
+    },
+    {
+      "name": "Events",
+      "description": "Parties, trips, gatherings the user attended or hosted. An Event can anchor a Roster and links the People who were there.",
+      "fields": [
+        { "name": "Event Name", "type": "singleLineText", "primary": true },
+        { "name": "Date", "type": "date", "options": { "dateFormat": { "name": "iso" } } },
+        { "name": "Location", "type": "singleLineText" },
+        { "name": "Notes", "type": "multilineText" },
+        { "name": "People", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Events", "description": "CRM contacts who were at this event" }
+      ]
+    },
+    {
+      "name": "Interactions",
+      "description": "Only log an Interaction record when the user explicitly reports having real-world contact with a person who is already in the People table (a text, call, in-person meeting, email). Do NOT create Interaction records when adding a new contact — use the Changelog for that. The Changelog covers additions; Interactions cover actual contact events.",
+      "fields": [
+        { "name": "Summary", "type": "singleLineText", "primary": true, "description": "One-line description of the contact event" },
+        { "name": "Date", "type": "date", "options": { "dateFormat": { "name": "iso" } } },
+        {
+          "name": "Type", "type": "singleSelect",
+          "options": { "choices": ["In Person", "Phone Call", "Text", "Social Media", "Email", "Video Call"] }
+        },
+        { "name": "Location", "type": "singleLineText", "description": "Where it happened, for in-person contact" },
+        { "name": "Notes", "type": "multilineText", "description": "Longer detail beyond the Summary line" },
+        { "name": "Person", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Interactions", "description": "Who the interaction was with" }
+      ]
+    },
+    {
+      "name": "Rosters",
+      "description": "Name-dump records ('globs'). One record = one list of names from an event, sign-up list, or social circle, kept as TEXT — not contacts. INTAKE RULE: when the user says 'glob this' or dumps a name list, create ONE Rosters record; do NOT create People records or Interactions for the names. Link at least one anchor: Anchor Group, Anchor Person, and/or Event. Names field: one name per line, optional note after ' — '. When a person is later promoted to a real contact, link them in Promoted People on every roster they appear on (keep their name line in Names — it is the historical record).",
+      "fields": [
+        { "name": "Roster Name", "type": "singleLineText", "primary": true, "description": "Short label naming the source or host, the event, and the date" },
+        { "name": "Date", "type": "date", "options": { "dateFormat": { "name": "iso" } } },
+        {
+          "name": "Source", "type": "singleSelect", "personalize": true,
+          "options": { "choices": ["Event sign-up", "Met in person", "Online list", "Friend's circle", "Party invite list", "Other"] }
+        },
+        { "name": "Names", "type": "multilineText", "description": "The dump. One name per line; optional context note after ' — '. Nicknames welcome" },
+        { "name": "Notes", "type": "multilineText", "description": "Event context, vibes, anything not per-name" },
+        { "name": "Anchor Group", "type": "multipleRecordLinks", "linkedTable": "Groups", "reverseFieldName": "Rosters", "description": "The club/group touchstone for this roster" },
+        { "name": "Anchor Person", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Rosters (Anchor)", "description": "The friend whose circle this roster came from" },
+        { "name": "Event", "type": "multipleRecordLinks", "linkedTable": "Events", "reverseFieldName": "Rosters", "description": "The Events record this roster corresponds to, when one exists. Can be the sole anchor" },
+        { "name": "Promoted People", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Rosters (Promoted From)", "description": "Names from this roster that later became real People records — the back-reference" }
+      ]
+    },
+    {
+      "name": "Changelog",
+      "description": "Audit log of changes made to the CRM by the agent. One record per logical change batch.",
+      "fields": [
+        { "name": "Summary", "type": "singleLineText", "primary": true },
+        { "name": "Date", "type": "date", "options": { "dateFormat": { "name": "iso" } } },
+        { "name": "Changes Made", "type": "multilineText" },
+        {
+          "name": "Tables Affected", "type": "multipleSelects",
+          "options": { "choices": ["People", "Interactions", "Events", "Groups", "Rosters", "Changelog", "Base Structure"] }
+        },
+        { "name": "Records Added", "type": "number", "options": { "precision": 0 } },
+        { "name": "Records Updated", "type": "number", "options": { "precision": 0 } },
+        { "name": "Requested By", "type": "singleLineText", "description": "Who asked for the change (useful when multiple people or automations write to the base)" },
+        { "name": "Open Questions / Flags", "type": "multilineText", "description": "Anything the agent flagged for human review instead of acting on" }
+      ]
+    }
+  ]
+}

@@ -20,6 +20,7 @@ After that, the skill is the product: every future conversation that mentions yo
 | [schema.json](schema.json) | Machine-readable spec of the full base: 6 tables, every field, type, choice list, and link — the single source of truth for setup | Your agent, during setup |
 | [SKILL.md](SKILL.md) | The operating manual the agent runs on every day afterward: API call patterns and gotchas, the language triggers, the standing workflows, data-quality rules | Your agent, every session |
 | [roster-globs.md](roster-globs.md) | Design doc for the Rosters pattern — why name dumps are stored as single list records instead of contacts | You, if curious |
+| [scheduled-tasks/](scheduled-tasks/) | Three recurring-job specs that run against this schema unattended (see Scheduled automations below) | Your agent, on a schedule |
 
 ## The data model
 
@@ -48,7 +49,7 @@ Two opinionated design choices worth knowing before you adopt it:
 - **Romantic-lane tracking** — a separate stage field (Interested → Flirting → Mutual → …) so that lane is queryable without polluting the friendship tiers.
 - **Remember the human details** — birthdays, partners' and kids' names, food preferences, how you met. Ask "what do I know about Sam?" before you see them again.
 - **Data quality on autopilot** — the skill carries standing rules (clubs are linked records, never text; never overwrite a filled field; flag instead of guess), and a periodic scan can tidy drift.
-- **Scheduled automations** (optional) — a weekly "who's due" nudge, a monthly data-quality scan, a changelog consolidation job. The skill documents how to keep them from breaking when the schema evolves, and how to pick their execution environment: because the CRM's critical path is pure connector-MCP, automations can run on cloud/hosted schedulers with no desktop machine awake — only browser fallbacks and local-MCP notification channels require a local session.
+- **Scheduled automations** (optional) — production-tested specs ship in [scheduled-tasks/](scheduled-tasks/): [weekly-social-engagement-nudge](scheduled-tasks/weekly-social-engagement-nudge/SKILL.md) (the "who's due" bump scan + open-Saturday social check), [monthly-crm-data-quality-scan](scheduled-tasks/monthly-crm-data-quality-scan/SKILL.md) (misfiled fields, stale records, old-interaction consolidation), and [weekly-changelog-consolidation](scheduled-tasks/weekly-changelog-consolidation/SKILL.md) (free-tier space management). The skill documents how to keep them from breaking when the schema evolves, and how to pick their execution environment: because the CRM's critical path is pure connector-MCP, these run on cloud/hosted schedulers with no desktop machine awake — only browser fallbacks and local-MCP notification channels require a local session.
 
 All example names above are invented.
 

@@ -2,6 +2,8 @@
 Status: applied then archived (2026-06-12)
 Created: 2026-06-12
 
+> **Update — superseded in part:** this design doc predates auto-matching. The shipped skill now AUTO-LINKS high-confidence *existing* contacts on roster intake and on the recurrence scan (see the auto-match procedure and confidence bar in `SKILL.md`). Manual confirmation is still required only to PROMOTE a brand-new name to a People record. The rest of this design (one record per list, text-blob names, anchors, promotion) stands.
+
 ## Problem
 After an event the user has a pile of names (an event sign-up list, six friends-of-a-friend at a bar) that do NOT each deserve a People record — most are one-offs. Today the only options are "create a full contact" (pollutes People) or "lose the names" (loses the recurrence signal when the same name shows up months later).
 

@@ -105,7 +105,8 @@
         },
         { "name": "Location", "type": "singleLineText", "description": "Where it happened, for in-person contact" },
         { "name": "Notes", "type": "multilineText", "description": "Longer detail beyond the Summary line" },
-        { "name": "Person", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Interactions", "description": "Who the interaction was with" }
+        { "name": "Person", "type": "multipleRecordLinks", "linkedTable": "People", "reverseFieldName": "Interactions", "description": "Who the interaction was with" },
+        { "name": "Follow-up Hooks", "type": "multilineText", "description": "Forward-looking topics from this exchange worth asking about next time (plans, pending news, things still unfolding). One hook per line, in the user's words. Filled when the interaction is logged; read back by the pre-hangout recap and the weekly nudge. Append only." }
       ]
     },
     {

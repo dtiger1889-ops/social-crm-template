@@ -88,6 +88,22 @@ Concrete example sort: records with `<FIELD_ID> === undefined` first, then sorte
 
 **If the Airtable MCP errors or returns nothing on either pull:** retry the call once (transient connector hiccups happen), and re-fetch choice IDs via `get_table_schema` if a filter returned zero records unexpectedly. If it still fails, send a Telegram: "weekly-social-engagement-nudge: Airtable MCP failed — couldn't pull the CRM. Reach out to someone this week anyway!" and exit. Do NOT fall back to Chrome or direct API calls — the MCP connector is the only Airtable path for this task.
 
+## STEP 3.5 — Attach conversation openers (Follow-up Hooks)
+
+The point: the nudge should say *what* to open with, not just *who*. When the user logs an interaction, forward-looking topics go into the Interactions field **Follow-up Hooks**, one per line. This step reads them back for the people you are about to surface.
+
+1. Collect the record IDs of every person who will be SHOWN in Section A and Section B. If that set is empty, skip this step.
+2. One call to `mcp__<airtable-mcp-server-id>__list_records_for_table`:
+   - `baseId`: `<YOUR_BASE_ID>`
+   - `tableId`: `<TBL_INTERACTIONS_ID>` (Interactions)
+   - `fieldIds`: `["<FIELD_ID>", "<FIELD_ID>", "<FIELD_ID>", "<FIELD_ID>"]` (Person, Date, Summary, Follow-up Hooks)
+   - `sort`: `[{fieldId: "<FIELD_ID>", direction: "desc"}]` (the Date field; sort takes field IDs, a field name returns an error)
+   - `pageSize`: 200
+3. For each shown person, look at their **three most recent** interactions (Person contains their record ID). Take the hooks from the most recent one whose Follow-up Hooks is non-blank. Drop any line that starts with `(resolved`. Keep at most 2 hooks.
+4. Hold them for STEP 4 as that person's opener line. A person with no hooks gets no opener line; never invent one from Summary, Notes, or anything else.
+
+If this call fails, send the nudge without openers and say so in the STEP 5 report. Openers are an extra, never a reason to skip the Telegram.
+
 ## STEP 4 — Compose and send ONE Telegram via Telegram MCP
 
 Send via the `telegram-notifier` MCP extension. Bot token + chat ID live in Windows Credential Manager — you never see them.
@@ -109,6 +125,7 @@ People you're building with who've gone quiet past their cadence:
 2. ...
 ```
 For never-contacted, write `never contacted yet — kick it off` instead of the date/overdue part.
+**Opener line (Sections A and B):** if STEP 3.5 found hooks for a shown person, add one indented line directly under their entry: `   💬 Ask about: <hook>; <hook> (from <YYYY-MM-DD>)`.
 
 **Section B — Weekend social (include only if Saturday was open, STEP 3 ran):**
 ```
@@ -131,7 +148,7 @@ If Last Contacted is null, write `never contacted`. If Follow Up Frequency is nu
 
 ## STEP 5 — Report
 
-Brief summary of what was sent: the Building bump names (if any) and the 5 weekend names (if sent).
+Brief summary of what was sent: the Building bump names (if any) and the 5 weekend names (if sent), plus how many got an opener line (STEP 3.5).
 
 ## Notes
 - **Airtable MCP is the ONLY CRM path** — it works in unattended runs without Chrome or permission prompts. The former Chrome/fetch() fallback was removed 2026-06-04 along with the inline API token.

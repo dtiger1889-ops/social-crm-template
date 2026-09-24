@@ -2,10 +2,11 @@
 name: social-crm
 description: >
   A personal Social CRM template in Airtable. Use this skill for ANY task involving the Social CRM —
-  adding people, logging interactions, updating records, querying contacts, linking groups/clubs,
+  adding people, logging interactions, recapping what the user last talked about with someone before
+  they meet again, updating records, querying contacts, linking groups/clubs,
   globbing rosters (name dumps from events/sign-up lists), running data quality checks, or managing
   schema. Triggers on mentions of CRM, Social CRM, Airtable contacts, adding or updating a person,
-  logging an interaction, community nicknames, clubs, "glob this", roster, sign-up list, or any request to
+  logging an interaction, "seeing <name> tonight", "what did I talk about with <name>", community nicknames, clubs, "glob this", roster, sign-up list, or any request to
   look up, add, or update a contact.
 ---
 
@@ -104,10 +105,10 @@ The main contact table. One record per person.
 |---|---|---|
 | Name | singleLineText | Full name or primary identifier |
 | Community Name | singleLineText | Nickname used in a social scene or club, if any |
-| Nicknames / Aliases | multilineText | Common nicknames or alternate names, one per line |
+| Nicknames / Aliases | multilineText | Common nicknames or alternate names, one per line. **Also the home for roster spelling variants** — see the auto-match rules under "Adding a roster". |
 | Phone | phoneNumber | Primary phone |
 | Email | email | Primary email |
-| Instagram / Social | url | Primary social media profile |
+| Instagram / Social | url | Primary social media profile. If links from different networks tend to overwrite each other, split this into a dedicated "Instagram" URL field plus this legacy/other field, and always write a new link to the empty one. |
 | Location | multilineText | Street address or a rough area description |
 | Birthday | date | Format: YYYY-MM-DD |
 | Known Since | date | Approximate date first met — use YYYY-01-01 if only year known |
@@ -199,6 +200,7 @@ Logs real-world contact events between the user and a person already in People.
 | Location | singleLineText | Where, for in-person contact |
 | Notes | multilineText | Longer detail beyond the Summary line |
 | Person | linkedRecord → People | Who the interaction was with |
+| Follow-up Hooks | multilineText | Forward-looking topics from the exchange worth raising next time, one per line, in the user's words. Append only. Read back by the pre-hangout recap and the weekly nudge. |
 
 **CRITICAL: Only create an Interaction record when the user reports having real-world contact with an existing person** (a text, call, meeting, etc.). Do NOT create Interaction records when:
 - Adding a new person to the CRM (even if the user says when they last talked)
@@ -211,7 +213,7 @@ The Changelog covers record additions. Interactions cover contact events.
 ### Rosters (<TBL_ROSTERS_ID>)
 Name-dump records — the user calls them "globs". One record = one list of names from an event, sign-up list, or social circle, kept as TEXT, not contacts. Most names on a roster will never become People records; the roster preserves them so recurrence is detectable months or years later.
 
-**LANGUAGE TRIGGER:** When the user says "glob this", "add a roster", "here's the sign-up list", or dumps a list of names with event context — create ONE Rosters record. Do NOT create People records or Interactions for the names on it.
+**LANGUAGE TRIGGER:** When the user says "glob this", "add a roster", "here's the sign-up list", or dumps a list of names with event context — create ONE Rosters record. Do NOT create People records or Interactions for the names on it. DO auto-link the high-confidence matches to people already in the CRM (see the auto-match procedure under "Adding a roster").
 
 | Field Name | Type | Purpose |
 |---|---|---|
@@ -260,19 +262,48 @@ If the person has a club/group: look up the Group record by name first, then lin
 
 ### Adding a roster ("glob this")
 Trigger: the user dumps a list of names with event context, says "glob this", "add a roster", "here's the sign-up list", etc. Often arrives via dispatch from their phone on the way to or from an event — the procedure must work unattended.
+
+**First, decide whether this is even a roster.** A roster is a bare list of mostly-strangers — names (and maybe a club) and little else, the kind of list where most entries will never become contacts. If instead the input carries per-person detail (phone numbers, jobs, how they're related, romantic interest) or is framed as a contact update, it is NOT a roster: handle it as **adding/updating People** (above), one contact at a time. A phone number next to a name, or wording like "update my CRM", is the tell. When it really is a name-dump:
+
 1. Look up (or create) the anchor: Group (club/group), Person (the friend), and/or Event. At least one.
 2. **POST to Rosters** — Names as given, one per line; Date; Source; Notes for event context.
-3. Quick scan: check whether any roster name is already a People contact (search People by name/community name). If yes, mention it to the user — but do NOT auto-link or create anything beyond the roster.
-4. **POST to Changelog** (1 record added, Tables Affected: Rosters).
-Do NOT create People records or Interactions for roster names.
+3. **Auto-match against People and link the high-confidence hits.** See the procedure and confidence bar below. This is automatic; do not ask first.
+4. **POST to Changelog** (1 record added; Tables Affected: Rosters, plus People if links changed).
+
+Do NOT create People records or Interactions for roster names. Auto-matching links EXISTING contacts; it never promotes a stranger.
+
+#### Auto-match procedure
+1. Fetch every People record with a non-empty Name, Community Name, or Nicknames / Aliases — one `list_records_for_table` call with those three fields, `pageSize` 500.
+2. Normalize both sides client-side before comparing: lowercase, strip punctuation and any placeholder prefix your community puts in front of a name, collapse whitespace, and drop a trailing parenthetical club/group.
+3. Compare each roster line's name portion (everything before " — ") against all three People fields.
+4. Link every high-confidence hit (see the bar below) into that roster's `Promoted People`.
+5. When the matched spelling differs from the stored name, append the roster's spelling to that person's `Nicknames / Aliases` as `<roster spelling> (sign-up-list spelling)` — do not overwrite the stored name, and do not duplicate a variant already recorded.
+6. Report: how many you linked, and separately the near-misses you did NOT link and why.
+
+#### The confidence bar
+**Link automatically — high confidence:**
+- Exact match after normalization.
+- Case, punctuation, spacing, or accent differences only.
+- A single-character typo, transposition, or obvious phonetic variant of the same name.
+- Trivial truncation or an added/removed parenthetical suffix.
+
+**Do NOT link — flag instead:**
+- A shared distinctive WORD but a different name: two nicknames that share one word, or two acronyms that share letters, are two different people until something else ties them together. Real bases have been bitten by exactly this.
+- A bare common first name with nothing else to anchor it, unless the club on the roster also matches that person's linked Group.
+- Two different CRM people both plausibly matching one roster line.
+- A fuzzy-search hit you cannot justify in one sentence. If explaining the match takes a paragraph, it is not high confidence.
+
+When in doubt, do not link. An unlinked match costs one line of report; a wrong link quietly corrupts the recurrence history, which is the entire point of keeping rosters.
+
+**Writing the links safely:** `Promoted People` is a linked-record field, so read the roster's existing list first and write back the full union — linked-record updates REPLACE the array, they do not append. Pass plain record-ID strings (see "Linking a group" for the value-shape gotcha). Re-read the roster afterward and confirm the links landed before reporting done.
 
 ### Recurrence scan (on demand only)
 Trigger: the user asks "who keeps showing up", "run the roster scan", "any repeat names", etc. Never scheduled.
 1. Fetch all Rosters (Names, Date, anchors).
-2. Normalize names client-side: lowercase, strip any "Just " name prefix, collapse whitespace.
+2. Normalize names client-side: lowercase, strip any placeholder name prefix (same rule as the auto-match), collapse whitespace.
 3. Count appearances per normalized name across rosters; also match each against People (Name, Community Name, Nicknames / Aliases).
-4. Report: (a) names appearing on 3+ rosters that are NOT in People — promotion candidates, with their roster dates and anchors; (b) names already in People but not linked in those rosters' Promoted People — offer to link.
-5. Only act (promote/link) on the user's confirmation.
+4. Report: (a) names appearing on 3+ rosters that are NOT in People — promotion candidates, with their roster dates and anchors; (b) names already in People but not linked in those rosters' Promoted People — link these automatically if they clear the high-confidence bar above, and report what you linked.
+5. Promotion to a NEW People record still needs the user's confirmation. Linking an EXISTING contact does not.
 
 ### Bump scan — who's due for a reach-out (on demand)
 Trigger: the user asks "who's due for a bump", "who's overdue", "who should I reach out to", "who am I letting go cold", "run the bump scan", etc.A scheduled weekly automation can do this for the Building tier; this command is the on-demand, any-tier version.
@@ -297,6 +328,25 @@ When the user confirms a recurring name deserves a record:
 ### Logging an interaction
 Trigger: the user says "I talked to X", "texted Y", "had lunch with Z", **or uses the word "interaction" in any casual form** ("log an interaction", "that was an interaction", etc.). Create 1 Interaction record. Optionally update Last Contacted on the Person record. No Changelog needed.
 
+**Capture the follow-up hooks.** After writing Summary, pull every forward-looking topic out of what the user said into `Follow-up Hooks`, one per line: plans, trips, interviews, moves, health or family news still unfolding, anything they would want to ask about next time. Rules:
+- **The user's words, not yours.** Paraphrase only to shorten; never add a topic they did not mention and never infer one from tone.
+- **Forward-looking only.** Something that already happened and is closed stays in Summary/Notes; something with a next chapter (waiting to hear back, about to start, planning) is a hook.
+- **Nothing forward-looking → leave the field blank.** Do not write "none".
+- **Append only** on an existing record: read it first, add lines, write the whole value back.
+- **Close the loop** when the next interaction with that person is logged: if the user says a hook got talked through or resolved, prefix that line on the OLD record with `(resolved YYYY-MM-DD) ` rather than deleting it.
+
+Why a separate field: a hook left inside the Summary prose never comes back. A hook in its own field is what the recap and the weekly nudge can find.
+
+### Pre-hangout recap ("seeing <name> tonight", "what did I talk about with <name>")
+Read only.
+1. Resolve the name to exactly one People record (see "Looking up a person"). Two plausible matches → list them and ask; never recap the wrong person.
+2. `list_records_for_table` on Interactions with `fieldIds` for Person, Date, Type, Summary and Follow-up Hooks, `sort` by the Date field ID descending (sort takes field IDs, not names); keep the rows whose Person contains that record ID; take the last three.
+3. Answer in this order: **open hooks first** (lines not prefixed `(resolved`), each with the date it came up; then a one-line Summary per interaction, newest first; then anything useful already on the People record (interests, family and pets, partner). Short enough to read on a phone.
+4. No interactions logged → say so plainly and fall back to the People record. Do not pad with guesses.
+5. Writes nothing. If the meetup happens and the user reports back, that is "Logging an interaction", which also closes any hook they say got talked through.
+
+A scheduled nudge can attach the same hooks as an opener line to each person it surfaces; `scheduled-tasks/weekly-social-engagement-nudge/SKILL.md` STEP 3.5 does this.
+
 ### Looking up a person
 
 **Preferred: `search_records` MCP tool** — free-text fuzzy search with token-order independence. Handles typos and partial names automatically.
@@ -312,6 +362,8 @@ Trigger: the user says "I talked to X", "texted Y", "had lunch with Z", **or use
 If `search_records` returns nothing and the user asserts the person exists, do NOT conclude they're missing. Fall back: `list_records_for_table` with no filter (paginate via `cursor`), then JS-side regex match across all field values. JS-side scanning skips empty fields naturally (they're `undefined`) and has no hidden failure modes.
 
 **Also search Rosters.** A person not in People may still be on rosters — run the same query against the Rosters table (Names field). Roster hits are prior co-presence history; report them ("on the May 3 and May 17 sign-up lists") even when no contact record exists.
+
+**Fuzzy search is a candidate generator, not a decision.** `search_records` returns partial-token hits that look convincing and are not — it will surface a handle that merely shares one word with your query. Apply the confidence bar (under "Adding a roster") before treating any fuzzy hit as the person.
 
 **Chrome-fallback path — formula gotcha.** If you're using the Chrome `javascript_tool` fetch() path for any reason, Airtable's REST `filterByFormula` has a silent failure mode: `SEARCH()` and `LOWER()` can error on `BLANK()` haystacks, and a single errored row inside an `OR()` branch drops that row from results with no diagnostic. Coerce every field ref with `&""` and prefer `FIND` over `SEARCH`:
 
@@ -329,9 +381,17 @@ This is how a known-existing record (a record with a Community Name that shares 
 PATCH the People record. If moving data out of Notes into a proper field: set the target field AND clear Notes (or remove just that portion from Notes). Never overwrite a non-empty field — flag it for human review instead.
 
 ### Linking a group
-1. Search Groups: `filterByFormula={Group Name}="<group name>"` (check Abbreviation too)
-2. If not found: POST a new Group record
-3. PATCH People record: `{ fields: { "Groups": [{ id: groupRecordId }] } }`
+1. Search Groups by name (and Abbreviation) — the Groups primary field is `Group Name`, not "Name".
+2. If not found: create a new Group record.
+3. Set the People record's `Groups` field to an array of record-ID **strings**.
+
+⚠️ **Linked-record writes fail SILENTLY if you use the wrong value shape — always read the record back to confirm.**
+- **Airtable MCP (`create_records_for_table` / `update_records_for_table`): pass plain ID strings** — `{ "<groups_field_id>": ["rec..."] }`.
+- **Historical REST payloads use objects** — `{ fields: { "Groups": [{ id: "rec..." }] } }`. Do NOT copy that shape into an MCP call.
+
+Passing the REST object form `[{ id: "rec..." }]` to the MCP does **not** error: the call returns HTTP 200 and echoes every other field you wrote, but the linked field is silently dropped and comes back empty. The create/update response also omits any field it didn't write, so a missing linked field in the response is NOT by itself proof of failure — you must re-read the record. Real bases have lost whole bulk linked-record writes this way and caught it only on read-back.
+
+The same rule covers every linked field (`Groups`, `Interactions.Person`, and each linked field on `Rosters` and `Events`). And **linked-record updates REPLACE the whole array — they do not append**: to add one link, read the current list first and write back the full union, or you silently wipe the existing links.
 
 ---
 
@@ -344,8 +404,10 @@ PATCH the People record. If moving data out of Notes into a proper field: set th
 - **Job info** belongs in Job/Employer field — if that field doesn't exist yet, check schema first.
 - **Addresses** → Location field
 - **Birthdays** → Birthday field (YYYY-MM-DD)
-- **When they met** → Known Since field and/or How We Met field
-- **Family / partner / kids / pets** → Family and Pets field (multiline, one per line)
+- **When they met** → Known Since field and/or How We Met field. When the person appears on rosters, Known Since defaults to the EARLIEST roster date — do not leave it blank.
+- **Family / partner / kids / pets without their own record** → Family and Pets field (multiline, one per line)
+- **Partner who has their own People record** → the Partner linked field, set on BOTH records.
+- **Roster spelling variants** → Nicknames / Aliases, tagged `(sign-up-list spelling)`. Never rename the canonical name to match a roster.
 
 ---
 

@@ -41,7 +41,8 @@ Two opinionated design choices worth knowing before you adopt it:
 ## What you actually use it for
 
 - **Capture on the go** — "Met Priya at Jordan's birthday thing, she's in the Sunday soccer group, works in urban planning. Add her." The agent creates the record, links the group, cross-references past rosters for her name, and logs the addition.
-- **Log interactions** — "Had lunch with Marcus." One Interaction record, Last Contacted updated. That's the whole transaction.
+- **Log interactions** — "Had lunch with Marcus." One Interaction record, Last Contacted updated. Anything forward-looking they mentioned goes into its own Follow-up Hooks field, one topic per line.
+- **Recall before you meet** — "Seeing Marcus tonight." The agent pulls your last few interactions with that person and leads with the open follow-up hooks, so you walk in knowing what to ask about. The weekly nudge attaches the same hooks to each person it tells you to reach out to.
 - **The bump scan** — "Who am I letting go cold?" Every person carries their own follow-up cadence (weekly for the friendship you're building, twice a year for the college friend). The agent computes who's overdue and hands you a ranked list with phone numbers.
 - **Glob a roster** — Paste the event sign-up list or the names you half-remember from a party. One record, zero contact spam.
 - **Recurrence detection** — "Anyone keep showing up?" The agent scans all rosters for names that appear again and again and proposes promoting them to real contacts, with the history attached ("on 4 lists since January").

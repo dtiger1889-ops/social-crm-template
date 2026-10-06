@@ -106,7 +106,7 @@ If this call fails, send the nudge without openers and say so in the STEP 5 repo
 
 ## STEP 4 — Compose and send ONE Telegram via Telegram MCP
 
-Send via the `telegram-notifier` MCP extension. Bot token + chat ID live in Windows Credential Manager — you never see them.
+Send via the [telegram-notifier-mcp](https://github.com/dtiger1889-ops/telegram-notifier-mcp) server (optional: any notifier MCP works; swap its send tool into the steps below). With that server, the bot token + chat ID live in Windows Credential Manager — you never see them.
 
 1. If `mcp__Telegram_Notifier__send_message` is in your active tool list, call it directly.
 2. If not: `ToolSearch { query: "select:mcp__Telegram_Notifier__send_message", max_results: 1 }`, then call it.

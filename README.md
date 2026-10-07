@@ -1,5 +1,7 @@
 # social-crm-template
 
+![Illustrated Social CRM example with a fictional contact, group and interaction](assets/example-output.png)
+
 A personal social CRM that lives in Airtable and is operated entirely by an AI agent (built for Claude; portable to any agent that can call the Airtable API). You talk to your agent in plain language — *"met a guy named Sam at the climbing gym, seemed cool"*, *"glob this list"*, *"who am I letting go cold?"* — and the agent maintains the database: contacts, groups, events, an interaction log, name lists, and an audit trail.
 
 This is an anonymized template extracted from a real, daily-driven system. All IDs, tokens, and values are placeholders or invented; you supply your own base and your own people.

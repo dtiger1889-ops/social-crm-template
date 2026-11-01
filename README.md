@@ -2,9 +2,15 @@
 
 ![Illustrated Social CRM example with a fictional contact, group and interaction](assets/example-output.png)
 
-A personal social CRM that lives in Airtable and is operated entirely by an AI agent (built for Claude; portable to any agent that can call the Airtable API). You talk to your agent in plain language — *"met a guy named Sam at the climbing gym, seemed cool"*, *"glob this list"*, *"who am I letting go cold?"* — and the agent maintains the database: contacts, groups, events, an interaction log, name lists, and an audit trail.
+A personal social CRM that lives in Airtable and is operated by an AI agent, with a setup runbook and a supplied skill. You talk to your agent in plain language, and it maintains the database: contacts, groups, events, an interaction log, name lists, and an audit trail. The documented setup uses Claude; another agent needs equivalent Airtable tools and adapted instruction loading.
 
 This is an anonymized template extracted from a real, daily-driven system. All IDs, tokens, and values are placeholders or invented; you supply your own base and your own people.
+
+## Before setup
+
+This is a template your agent builds in your Airtable workspace, followed by a skill it uses to maintain that base. Start by asking: "Read SETUP.md and schema.json, check my Airtable connection, and show the base and tables you would create. Wait for my approval before writing to Airtable or scheduling anything. Keep credentials out of chat."
+
+After setup is approved, the success check is six tables matching `schema.json` and the skill's supporting files installed together. Claude with Airtable access is the documented path; another agent needs equivalent schema/data permissions and a way to load the operating instructions. API access alone does not prove support for the complete workflow. Airtable plan limits and any agent usage costs still apply.
 
 ## Quickstart: point your agent at this repo
 
@@ -60,7 +66,7 @@ All example names above are invented.
 ## Requirements
 
 - An Airtable account (free tier works; the Rosters design exists partly to respect free-tier record limits).
-- An agent with Airtable access: Claude with the Airtable MCP server is the tested path; anything that can call the Airtable REST API can run the same playbook via the endpoints in SETUP.md.
+- An agent with Airtable access: Claude with the Airtable MCP server is the documented path. SETUP.md also describes REST endpoints for clients with equivalent permissions; that is an adaptation route, not verification of every client.
 - Optional: a Telegram bot for push summaries of batch operations.
 
 ## Privacy notes
@@ -70,6 +76,10 @@ This system stores real information about real people in your life on a third-pa
 - **Never commit your filled-in copy of SKILL.md** — once the placeholders are real IDs (and possibly a token), it's a credential-bearing private file.
 - Keep the base private; the agent needs API access, not the world.
 - The Changelog table exists so you can audit what the agent did — read it occasionally.
+
+## Help
+
+For setup questions or errors, [open an issue](https://github.com/dtiger1889-ops/social-crm-template/issues) with the relevant versions and a redacted error description.
 
 ## License
 
